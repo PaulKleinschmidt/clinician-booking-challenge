@@ -1,20 +1,20 @@
-enum UsState {
-  NY,
-  NC,
-  FL,
+export enum UsState {
+  NY = 'NY',
+  NC = 'NC',
+  FL = 'FL',
   // etc
 }
 
-enum InsurancePayer {
-  AETNA,
-  BCBS,
-  CIGNA,
-  // etc
+export enum InsurancePayer {
+  AETNA = 'Aetna',
+  BCBS = 'Blue Cross Blue Shield',
+  CIGNA = 'Cigna',
+  UHC = 'United Healthcare',
 }
 
-enum ClinicianType {
-  THERAPIST,
-  PSYCHOLOGIST,
+export enum ClinicianType {
+  THERAPIST = 'Therapist',
+  PSYCHOLOGIST = 'Psychologist',
 }
 
 enum AppointmentType {
