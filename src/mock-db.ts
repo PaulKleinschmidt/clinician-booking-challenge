@@ -67,6 +67,15 @@ export const availableSlots: IAvailableSlot[] = [
     updatedAt: new Date(),
   },
   {
+    id: '3f3426ab-a4fd-4b3d-8c2d-67bbad6fd019',
+    clinicianId: clinician1.id,
+    clinician: clinician1,
+    date: new Date('2025-03-19T08:00:00.000Z'),
+    length: 90,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
     id: '4982c223-643d-439f-80c5-72aecabe8fb8',
     clinicianId: clinician1.id,
     clinician: clinician1,
@@ -75,11 +84,12 @@ export const availableSlots: IAvailableSlot[] = [
     createdAt: new Date(),
     updatedAt: new Date(),
   },
+  // Conflicting appointment (should be filtered out by optimizeAssessmentSlots)
   {
-    id: '3f3426ab-a4fd-4b3d-8c2d-67bbad6fd019',
+    id: '4982123c223-643d-439f-80c5-72aecabe8fb8',
     clinicianId: clinician1.id,
     clinician: clinician1,
-    date: new Date('2025-03-19T08:00:00.000Z'),
+    date: new Date('2025-03-19T12:30:00.000Z'),
     length: 90,
     createdAt: new Date(),
     updatedAt: new Date(),

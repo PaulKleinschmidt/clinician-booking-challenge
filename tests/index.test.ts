@@ -1,4 +1,8 @@
-import { generateAssessmentSlotsForPatient } from '../src';
+import {
+  generateAssessmentSlotsForPatient,
+  optimizeAssessmentSlots,
+} from '../src';
+import { ASSESSMENT_DURATION_MINUTES } from '../src/constants';
 import { patient, availableSlots, clinicians } from '../src/mock-db';
 import { InsurancePayer, IPatient, UsState } from '../src/types';
 
@@ -68,5 +72,27 @@ describe(generateAssessmentSlotsForPatient, () => {
         ],
       ],
     });
+  });
+});
+
+describe(optimizeAssessmentSlots, () => {
+  it('should return an optimized list of assessment slots', () => {
+    expect(
+      optimizeAssessmentSlots(
+        [
+          new Date('2024-08-19T12:00:00.000Z'),
+          new Date('2024-08-19T12:15:00.000Z'),
+          new Date('2024-08-19T12:30:00.000Z'),
+          new Date('2024-08-19T12:45:00.000Z'),
+          new Date('2024-08-19T13:00:00.000Z'),
+          new Date('2024-08-19T13:15:00.000Z'),
+          new Date('2024-08-19T13:30:00.000Z'),
+        ],
+        ASSESSMENT_DURATION_MINUTES
+      )
+    ).toEqual([
+      new Date('2024-08-19T12:00:00.000Z'),
+      new Date('2024-08-19T13:30:00.000Z'),
+    ]);
   });
 });

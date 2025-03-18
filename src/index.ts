@@ -8,9 +8,39 @@ import {
 } from './types';
 import { isDateOnLaterDay, isEmpty, isWithinSevenDays } from './helpers';
 import { groupBy } from 'lodash';
+import { addMinutes } from 'date-fns';
+import { ASSESSMENT_DURATION_MINUTES } from './constants';
 
 /*
- * Finds the clinicians in our mock DB that match the provided insurance and state
+ * Given a list of assessment slots and a duration, returns an optimized list of bookable slots that reduce
+ * the number of overlapping appointments.
+ *
+ * This function assumes the slots array is sorted in ascending order
+ */
+export const optimizeAssessmentSlots = (
+  slots: Date[],
+  duration: number
+): Date[] => {
+  const result: Date[] = [];
+
+  let lastEndTime: Date | null = null;
+
+  for (const slot of slots) {
+    const endTime = addMinutes(slot, duration);
+
+    // If this slot does not overlap with the last chosen end time, push it to the result array
+    if (!lastEndTime || slot >= lastEndTime) {
+      result.push(slot);
+      // Update the last appointment end time
+      lastEndTime = endTime;
+    }
+  }
+
+  return result;
+};
+
+/*
+ * Finds the clinicians that match the provided insurance and state
  *
  * Note: This function takes a list of clinicians from the mock db as an argument. In a real app, we would query our DB here
  */
@@ -29,7 +59,7 @@ const findCliniciansByInsuranceAndState = (
 };
 
 /*
- * Finds the appointment slots in our mock DB that are for the provided clinician ID, sorted by date (most recent first)
+ * Finds the appointment slots that are for the provided clinician ID, sorted by date ASC
  *
  * Note: This function takes a list of available slots from the mock db as an argument. In a real app, we would query our DB here
  */
@@ -90,6 +120,20 @@ const generateAssessmentPairsForClinician = (
   return appointmentSlotTuples;
 };
 
+/*
+ * Returns the available assessment slots for a given patient, grouped by clinician ID.
+ *
+ * Example Output:
+ * {
+ *   "clinician-uuid-1": [
+ *     ["2025-03-18T12:00:00.000Z", "2025-03-19T08:00:00.000Z"],
+ *     ["2025-03-20T12:00:00.000Z", "2025-03-27T12:00:00.000Z"]
+ *   ],
+ *   "clinician-uuid-2": [
+ *     ["2025-03-18T12:00:00.000Z", "2025-03-19T08:00:00.000Z"]
+ *   ]
+ * }
+ */
 export const generateAssessmentSlotsForPatient = (
   patient: IPatient,
   clinicians: IClinician[],
@@ -129,7 +173,16 @@ export const generateAssessmentSlotsForPatient = (
   const results: { [key: string]: Date[][] } = {};
 
   for (const clinician of cliniciansForPatient) {
-    const availableSlotsForClinician = slotsByClinicianID[clinician.id];
+    let availableSlotsForClinician = slotsByClinicianID[clinician.id];
+
+    const optimizedSlots = optimizeAssessmentSlots(
+      availableSlotsForClinician.map((slot) => slot.date),
+      ASSESSMENT_DURATION_MINUTES
+    );
+
+    availableSlotsForClinician = availableSlotsForClinician.filter((slot) =>
+      optimizedSlots.includes(slot.date)
+    );
 
     const assessmentPairsForClinician = generateAssessmentPairsForClinician(
       availableSlotsForClinician

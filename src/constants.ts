@@ -1,0 +1,1 @@
+export const ASSESSMENT_DURATION_MINUTES = 90;
