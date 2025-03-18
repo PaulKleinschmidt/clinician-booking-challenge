@@ -12,11 +12,11 @@ import { addMinutes, startOfDay, startOfWeek } from 'date-fns';
 import { ASSESSMENT_DURATION_MINUTES } from './constants';
 
 /*
- * Finds the clinicians that match the provided insurance and state
+ * Finds the clinicians with type 'Psychologist' that match the provided insurance and state
  *
  * Note: This function takes a list of clinicians from the mock db as an argument. In a real app, we would query our DB here.
  */
-const findCliniciansByInsuranceAndState = (
+const findPsychologistsByInsuranceAndState = (
   insurance: InsurancePayer,
   state: UsState,
   clinicians: IClinician[]
@@ -45,7 +45,9 @@ const findAppointmentSlotsByClinicianIDs = (
       (slot) =>
         clinicianIds.includes(slot.clinicianId) &&
         // Assumption: Our slots DB might contain slots in the past. We don't want to show patients slots for times that have already happened, so we'll filter them out.
-        slot.date > currentDate
+        slot.date > currentDate &&
+        // Length check may be redundant since we're only dealing with appointments for Psychologists
+        slot.length === 90
     )
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 };
@@ -206,7 +208,7 @@ export const generateAssessmentSlotsForPatient = (
 ): { [key: string]: Date[][] } => {
   const { insurance, state } = patient;
 
-  const cliniciansForPatient = findCliniciansByInsuranceAndState(
+  const cliniciansForPatient = findPsychologistsByInsuranceAndState(
     insurance,
     state,
     clinicians
@@ -242,6 +244,7 @@ export const generateAssessmentSlotsForPatient = (
     if (!availableSlotsForClinician) continue;
 
     const slotDates = availableSlotsForClinician.map((slot) => slot.date);
+
     const processedSlots = flow(
       (filteredSlots: Date[]) =>
         optimizeAssessmentSlots(filteredSlots, ASSESSMENT_DURATION_MINUTES),

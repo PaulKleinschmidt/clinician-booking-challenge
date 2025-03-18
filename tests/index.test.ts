@@ -15,7 +15,7 @@ import { InsurancePayer, IPatient, UsState } from '../src/types';
 const fixedDate = new Date('2025-03-17T12:00:00.000Z');
 
 describe(generateAssessmentSlotsForPatient, () => {
-  it('should return null if no relevant clinicians are found for the patient', () => {
+  it('should return an empty object if no relevant clinicians are found for the patient', () => {
     const patientWithOtherInsurance: IPatient = {
       id: '251ef27a-2ca7-4517-ab4a-93208287224c',
       firstName: 'Paul',
@@ -104,7 +104,7 @@ describe(optimizeAssessmentSlots, () => {
 });
 
 describe(filterSlotsByAvailability, () => {
-  it('should return an optimized list of assessment slots', () => {
+  it('should return slots that are bookable with the clinician, taking into account their existing appointments and appointment limits', () => {
     expect(
       filterSlotsByAvailability(
         [
@@ -113,8 +113,8 @@ describe(filterSlotsByAvailability, () => {
           new Date('2025-03-20T14:00:00.000Z'),
           new Date('2025-03-21T14:00:00.000Z'),
           // Appointments in the week of 3/23
-          new Date('2025-03-25T09:00:00.000Z'), // <-- should be filtered out, since this clinician has 2 appointments on 3/25 already
-          new Date('2025-03-26T12:00:00.000Z'), // <-- this one should be kept
+          new Date('2025-03-25T09:00:00.000Z'), // <-- Should be filtered out. his clinician has 2 appointments on 3/25 already
+          new Date('2025-03-26T12:00:00.000Z'), // <-- This one should be kept
         ],
         clinician2
       )
