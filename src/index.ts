@@ -12,6 +12,45 @@ import { addMinutes, startOfDay, startOfWeek } from 'date-fns';
 import { ASSESSMENT_DURATION_MINUTES } from './constants';
 
 /*
+ * Finds the clinicians that match the provided insurance and state
+ *
+ * Note: This function takes a list of clinicians from the mock db as an argument. In a real app, we would query our DB here.
+ */
+const findCliniciansByInsuranceAndState = (
+  insurance: InsurancePayer,
+  state: UsState,
+  clinicians: IClinician[]
+): IClinician[] => {
+  return clinicians.filter(
+    (clinician) =>
+      // Ensure we are only getting psychologists, since they handle assessments
+      clinician.clinicianType === ClinicianType.PSYCHOLOGIST &&
+      clinician.insurances.includes(insurance) &&
+      clinician.states.includes(state)
+  );
+};
+
+/*
+ * Finds the appointment slots that are for the provided clinician ID, sorted by date ASC
+ *
+ * Note: This function takes a list of available slots from the mock db as an argument. In a real app, we would query our DB here.
+ */
+const findAppointmentSlotsByClinicianIDs = (
+  currentDate: Date,
+  clinicianIds: string[],
+  availableSlots: IAvailableSlot[]
+): IAvailableSlot[] => {
+  return availableSlots
+    .filter(
+      (slot) =>
+        clinicianIds.includes(slot.clinicianId) &&
+        // Assumption: Our slots DB might contain slots in the past. We don't want to show patients slots for times that have already happened, so we'll filter them out.
+        slot.date > currentDate
+    )
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
+};
+
+/*
  * Filters a list of slots, returning only those that are bookable with
  * the clinician given their existing appointments and appointment limits
  *
@@ -101,45 +140,6 @@ export const optimizeAssessmentSlots = (
   }
 
   return result;
-};
-
-/*
- * Finds the clinicians that match the provided insurance and state
- *
- * Note: This function takes a list of clinicians from the mock db as an argument. In a real app, we would query our DB here.
- */
-const findCliniciansByInsuranceAndState = (
-  insurance: InsurancePayer,
-  state: UsState,
-  clinicians: IClinician[]
-): IClinician[] => {
-  return clinicians.filter(
-    (clinician) =>
-      // Ensure we are only getting psychologists, since they handle assessments
-      clinician.clinicianType === ClinicianType.PSYCHOLOGIST &&
-      clinician.insurances.includes(insurance) &&
-      clinician.states.includes(state)
-  );
-};
-
-/*
- * Finds the appointment slots that are for the provided clinician ID, sorted by date ASC
- *
- * Note: This function takes a list of available slots from the mock db as an argument. In a real app, we would query our DB here.
- */
-const findAppointmentSlotsByClinicianIDs = (
-  currentDate: Date,
-  clinicianIds: string[],
-  availableSlots: IAvailableSlot[]
-): IAvailableSlot[] => {
-  return availableSlots
-    .filter(
-      (slot) =>
-        clinicianIds.includes(slot.clinicianId) &&
-        // Assumption: Our slots DB might contain slots in the past. We don't want to show patients slots for times that have already happened, so we'll filter them out.
-        slot.date > currentDate
-    )
-    .sort((a, b) => a.date.getTime() - b.date.getTime());
 };
 
 /*
