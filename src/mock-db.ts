@@ -6,6 +6,7 @@
 
 import {
   ClinicianType,
+  IAppointment,
   IAvailableSlot,
   IClinician,
   InsurancePayer,
@@ -23,7 +24,7 @@ export const patient: IPatient = {
   updatedAt: new Date(),
 };
 
-const clinician1 = {
+const clinician1: IClinician = {
   id: '9c516382-c5b2-4677-a7ac-4e100fa35bdd',
   firstName: 'Jane',
   lastName: 'Doe',
@@ -38,16 +39,24 @@ const clinician1 = {
   updatedAt: new Date(),
 };
 
-const clinician2 = {
+export const clinician2: IClinician = {
   id: '4982c223-643d-439f-80c5-72aecabe8fb8',
   firstName: 'Gregory',
   lastName: 'House',
   states: [UsState.NC, UsState.NY],
   insurances: [InsurancePayer.BCBS, InsurancePayer.AETNA],
   clinicianType: ClinicianType.PSYCHOLOGIST,
-  appointments: [],
+  appointments: [
+    // Week of 3/16: three appointments (fully booked for the week)
+    { scheduledFor: new Date('2025-03-18T12:00:00.000Z') },
+    { scheduledFor: new Date('2025-03-19T12:00:00.000Z') },
+    { scheduledFor: new Date('2025-03-20T12:00:00.000Z') },
+    // Week of 3/24: two appointments on same day, one remaining appointment slot available for the week
+    { scheduledFor: new Date('2025-03-25T12:00:00.000Z') },
+    { scheduledFor: new Date('2025-03-25T15:00:00.000Z') },
+  ] as unknown as IAppointment[],
   maxDailyAppointments: 2,
-  maxWeeklyAppointments: 8,
+  maxWeeklyAppointments: 3,
   availableSlots: [],
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -117,7 +126,7 @@ export const availableSlots: IAvailableSlot[] = [
     id: '4982c223-643d-439f-80c5-72aecabe8fb8',
     clinicianId: clinician2.id,
     clinician: clinician2,
-    date: new Date('2025-03-19T12:00:00.000Z'),
+    date: new Date('2025-03-19T12:00:00.000Z'), // <-- Clinician is already fully booked the week of 3/16, this slot should be filtered out
     length: 90,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -126,7 +135,34 @@ export const availableSlots: IAvailableSlot[] = [
     id: '4982c223-643d-439f-80c5-72aecabe8fb8',
     clinicianId: clinician2.id,
     clinician: clinician2,
-    date: new Date('2025-03-20T12:00:00.000Z'),
+    date: new Date('2025-03-20T12:00:00.000Z'), // <-- Clinician is already fully booked the week of 3/16, this slot should be filtered out
+    length: 90,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: '4982c223-643d-439f-80c5-72aecabe8fb8',
+    clinicianId: clinician2.id,
+    clinician: clinician2,
+    date: new Date('2025-03-27T12:00:00.000Z'),
+    length: 90,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: '4982c223-643d-439f-80c5-72aecabe8fb8',
+    clinicianId: clinician2.id,
+    clinician: clinician2,
+    date: new Date('2025-03-28T12:00:00.000Z'), // <-- Clinician only has one available slot for the week. The slot on 3/27 is the only bookable option. This slot should be filtered out.
+    length: 90,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: '4982c223-643d-439f-80c5-72aecabe8fb8',
+    clinicianId: clinician2.id,
+    clinician: clinician2,
+    date: new Date('2025-04-01T12:00:00.000Z'),
     length: 90,
     createdAt: new Date(),
     updatedAt: new Date(),

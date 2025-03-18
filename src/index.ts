@@ -7,9 +7,73 @@ import {
   UsState,
 } from './types';
 import { isDateOnLaterDay, isEmpty, isWithinSevenDays } from './helpers';
-import { groupBy } from 'lodash';
-import { addMinutes } from 'date-fns';
+import { flow, groupBy } from 'lodash';
+import { addMinutes, startOfDay, startOfWeek } from 'date-fns';
 import { ASSESSMENT_DURATION_MINUTES } from './constants';
+
+/*
+ * Filters a list of slots, returning only those that are bookable with
+ * the clinician given their existing appointments and appointment limits
+ *
+ * A slot is considered bookable if:
+ * - The clinician has not exceeded their daily appointment limit (maxDailyAppointments)
+ * - The clinician has not exceeded their weekly appointment limit (maxWeeklyAppointments)
+ */
+export const filterSlotsByAvailability = (
+  slots: Date[],
+  clinician: IClinician
+): Date[] => {
+  const { maxDailyAppointments, maxWeeklyAppointments, appointments } =
+    clinician;
+  const dailyAppointmentCountMap = new Map();
+  const weeklyAppointmentCountMap = new Map();
+
+  for (const appointment of appointments) {
+    const dayKey = startOfDay(appointment.scheduledFor).toISOString();
+    // Assumption: a clinician's workweek begins on Sunday and ends on Saturday
+    const weekKey = startOfWeek(appointment.scheduledFor).toISOString();
+
+    dailyAppointmentCountMap.set(
+      dayKey,
+      (dailyAppointmentCountMap.get(dayKey) ?? 0) + 1
+    );
+    weeklyAppointmentCountMap.set(
+      weekKey,
+      (weeklyAppointmentCountMap.get(weekKey) ?? 0) + 1
+    );
+  }
+
+  return slots.filter((slot) => {
+    const dayKey = startOfDay(slot).toISOString();
+    const weekKey = startOfWeek(slot).toISOString();
+
+    const numAppointmentsOnSameDay = dailyAppointmentCountMap.get(dayKey) ?? 0;
+    const numAppointmentsOnSameWeek =
+      weeklyAppointmentCountMap.get(weekKey) ?? 0;
+
+    const isBookable =
+      numAppointmentsOnSameDay < maxDailyAppointments &&
+      numAppointmentsOnSameWeek < maxWeeklyAppointments;
+
+    /*
+     * If the slot is bookable, simulate booking it by incrementing the daily and weekly appointment counts in the map.
+     * This is necessary because we are booking pairs of appointments. Without this check, we would risk exceeding the clinician's
+     * daily or weekly limits when booking the second appointment.
+     */
+    if (isBookable) {
+      dailyAppointmentCountMap.set(
+        dayKey,
+        (dailyAppointmentCountMap.get(dayKey) ?? 0) + 1
+      );
+      weeklyAppointmentCountMap.set(
+        weekKey,
+        (weeklyAppointmentCountMap.get(weekKey) ?? 0) + 1
+      );
+    }
+
+    return isBookable;
+  });
+};
 
 /*
  * Given a list of assessment slots and a duration, returns an optimized list of bookable slots that reduce
@@ -42,7 +106,7 @@ export const optimizeAssessmentSlots = (
 /*
  * Finds the clinicians that match the provided insurance and state
  *
- * Note: This function takes a list of clinicians from the mock db as an argument. In a real app, we would query our DB here
+ * Note: This function takes a list of clinicians from the mock db as an argument. In a real app, we would query our DB here.
  */
 const findCliniciansByInsuranceAndState = (
   insurance: InsurancePayer,
@@ -61,7 +125,7 @@ const findCliniciansByInsuranceAndState = (
 /*
  * Finds the appointment slots that are for the provided clinician ID, sorted by date ASC
  *
- * Note: This function takes a list of available slots from the mock db as an argument. In a real app, we would query our DB here
+ * Note: This function takes a list of available slots from the mock db as an argument. In a real app, we would query our DB here.
  */
 const findAppointmentSlotsByClinicianIDs = (
   currentDate: Date,
@@ -72,7 +136,7 @@ const findAppointmentSlotsByClinicianIDs = (
     .filter(
       (slot) =>
         clinicianIds.includes(slot.clinicianId) &&
-        // Assumption: Our slots DB might contain slots in the past. We don't want to show patients slots for times that have already happened, so we'll filter them out
+        // Assumption: Our slots DB might contain slots in the past. We don't want to show patients slots for times that have already happened, so we'll filter them out.
         slot.date > currentDate
     )
     .sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -121,7 +185,7 @@ const generateAssessmentPairsForClinician = (
 };
 
 /*
- * Returns the available assessment slots for a given patient, grouped by clinician ID.
+ * Returns the available assessment slots for a given patient, grouped by clinician ID
  *
  * Example Output:
  * {
@@ -139,7 +203,7 @@ export const generateAssessmentSlotsForPatient = (
   clinicians: IClinician[],
   availableSlots: IAvailableSlot[],
   currentDate: Date
-): { [key: string]: Date[][] } | null => {
+): { [key: string]: Date[][] } => {
   const { insurance, state } = patient;
 
   const cliniciansForPatient = findCliniciansByInsuranceAndState(
@@ -150,7 +214,7 @@ export const generateAssessmentSlotsForPatient = (
 
   // If we don't have any clinicians that accept the patients insurance or work in their state, return early
   if (isEmpty(cliniciansForPatient)) {
-    return null;
+    return {};
   }
 
   const slotsForClinicians = findAppointmentSlotsByClinicianIDs(
@@ -161,7 +225,7 @@ export const generateAssessmentSlotsForPatient = (
 
   // If we have no available slots for the clinicians, return early
   if (isEmpty(slotsForClinicians)) {
-    return null;
+    return {};
   }
 
   // Group the available slots by clinician ID, for performant lookup later
@@ -175,13 +239,17 @@ export const generateAssessmentSlotsForPatient = (
   for (const clinician of cliniciansForPatient) {
     let availableSlotsForClinician = slotsByClinicianID[clinician.id];
 
-    const optimizedSlots = optimizeAssessmentSlots(
-      availableSlotsForClinician.map((slot) => slot.date),
-      ASSESSMENT_DURATION_MINUTES
-    );
+    if (!availableSlotsForClinician) continue;
+
+    const slotDates = availableSlotsForClinician.map((slot) => slot.date);
+    const processedSlots = flow(
+      (filteredSlots: Date[]) =>
+        optimizeAssessmentSlots(filteredSlots, ASSESSMENT_DURATION_MINUTES),
+      (slots: Date[]) => filterSlotsByAvailability(slots, clinician)
+    )(slotDates);
 
     availableSlotsForClinician = availableSlotsForClinician.filter((slot) =>
-      optimizedSlots.includes(slot.date)
+      processedSlots.includes(slot.date)
     );
 
     const assessmentPairsForClinician = generateAssessmentPairsForClinician(

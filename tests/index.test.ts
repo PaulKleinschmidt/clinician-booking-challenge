@@ -1,9 +1,15 @@
 import {
+  filterSlotsByAvailability,
   generateAssessmentSlotsForPatient,
   optimizeAssessmentSlots,
 } from '../src';
 import { ASSESSMENT_DURATION_MINUTES } from '../src/constants';
-import { patient, availableSlots, clinicians } from '../src/mock-db';
+import {
+  patient,
+  availableSlots,
+  clinicians,
+  clinician2,
+} from '../src/mock-db';
 import { InsurancePayer, IPatient, UsState } from '../src/types';
 
 const fixedDate = new Date('2025-03-17T12:00:00.000Z');
@@ -27,7 +33,7 @@ describe(generateAssessmentSlotsForPatient, () => {
         availableSlots,
         fixedDate
       )
-    ).toEqual(null);
+    ).toEqual({});
   });
 
   it('should return the available assessment slots for the patient', () => {
@@ -67,8 +73,8 @@ describe(generateAssessmentSlotsForPatient, () => {
       ],
       '4982c223-643d-439f-80c5-72aecabe8fb8': [
         [
-          new Date('2025-03-19T12:00:00.000Z'),
-          new Date('2025-03-20T12:00:00.000Z'),
+          new Date('2025-03-27T12:00:00.000Z'),
+          new Date('2025-04-01T12:00:00.000Z'),
         ],
       ],
     });
@@ -94,5 +100,24 @@ describe(optimizeAssessmentSlots, () => {
       new Date('2024-08-19T12:00:00.000Z'),
       new Date('2024-08-19T13:30:00.000Z'),
     ]);
+  });
+});
+
+describe(filterSlotsByAvailability, () => {
+  it('should return an optimized list of assessment slots', () => {
+    expect(
+      filterSlotsByAvailability(
+        [
+          // Appointments in the week of 3/16 (should be filtered out given this clinician's appointment load)
+          new Date('2025-03-18T14:00:00.000Z'),
+          new Date('2025-03-20T14:00:00.000Z'),
+          new Date('2025-03-21T14:00:00.000Z'),
+          // Appointments in the week of 3/23
+          new Date('2025-03-25T09:00:00.000Z'), // <-- should be filtered out, since this clinician has 2 appointments on 3/25 already
+          new Date('2025-03-26T12:00:00.000Z'), // <-- this one should be kept
+        ],
+        clinician2
+      )
+    ).toEqual([new Date('2025-03-26T12:00:00.000Z')]);
   });
 });
